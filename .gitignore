@@ -1,0 +1,18 @@
+# Object files
+*.o
+
+# Executables
+*.out
+*.exe
+
+# Editor
+*.swp
+*.swo
+
+# Core dumps
+core
+core.*
+
+# OS
+.DS_Store
+Thumbs.db
