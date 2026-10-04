@@ -1,4 +1,4 @@
-﻿/* 
+/* 
     TCP Daytime Server
 
 - Original Source:
@@ -12,7 +12,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "unp.h"
+#include "socket_support.h"
 #include <time.h>
 
 /* 
@@ -84,15 +84,19 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+    if (argc > 2) err_quit("Usage: %s [port]", argv[0]);
+
     // TCP 소켓을 생성해 socket descriptor를 받아와서 sockfd에 저장
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         err_sys("socket error");
 
     // 서버 주소에 대한 구조체 servaddr에 주소를 설정함
-    bzero(&servaddr, sizeof(servaddr));           // 0으로 채움
+    memset(&servaddr, 0, sizeof(servaddr));           // 0으로 채움
     servaddr.sin_family = AF_INET;                // Internet Protocol Suite를 사용
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); // 0으로 채우는 것과 동일함
-    servaddr.sin_port = htons(13);                /* daytime server port number */
+    servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 로컬 검증용 loopback 주소
+    servaddr.sin_port = htons(argc == 2 ? parse_port(argv[1]) : 1313);                /* selected local port */
+
+    prepare_listener(listenfd);
 
     // servaddr에 저장된 주소를 소켓에 bind함
     if (bind(listenfd, (SA *)&servaddr, sizeof(servaddr)) < 0) // 공간을 줄이기 위해 socket sockaddr는 SA로 치환함. connect는 SA * 타입을 받아야 하는데 &servaddr는 struct sockaddr_in* 타입으로 다른 상황이므로, 타입 캐스팅이 필요함
@@ -112,7 +116,7 @@ int main(int argc, char *argv[]) {
     again:
         if ((connfd = accept(listenfd, (SA *)NULL, NULL)) < 0) { // (SA *)NULL 부분엔 원래 client의 주소 정보를 저장할 구조체의 주소가 들어가는데, 이 프로그램은 그 구조체를 사용하지 않아서 NULL을 대입함
 #ifdef EPROTO                                             /* Protocol error */
-            if (errno == EPROTO || errno == ECONNABORTED) /* Software caused connection abort */
+            if (errno == EINTR || errno == EPROTO || errno == ECONNABORTED) /* Software caused connection abort */
 #else
             if (errno == ECONNABORTED) /* Software caused connection abort */
 #endif
@@ -128,7 +132,7 @@ int main(int argc, char *argv[]) {
 #ifdef _WIN32
         if (send(connfd, buff, strlen(buff), 0) != strlen(buff)) { // 파일을 쓰듯이 buff의 문자열을 읽어 buff 길이만큼 송신함
 #else
-        if (write(connfd, buff, strlen(buff)) != strlen(buff)) { // 파일을 쓰듯이 buff의 문자열을 읽어 buff 길이만큼 송신함
+        if (write_all(connfd, buff, strlen(buff)) < 0) { // 파일을 쓰듯이 buff의 문자열을 읽어 buff 길이만큼 송신함
 #endif
             err_sys("send error");
         }
