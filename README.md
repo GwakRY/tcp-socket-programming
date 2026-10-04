@@ -1,241 +1,135 @@
 # TCP Socket Programming
 
-컴퓨터 네트워크 전공 과목에서 진행한 C/Linux 기반 소켓 프로그래밍 프로젝트입니다.  
-TCP/IP 기반 **Daytime Client/Server**와 **Echo Client/Server**를 구현하며 Client–Server 연결 수립, IPv4 주소 처리, 데이터 송수신 과정을 학습했습니다.
+컴퓨터 네트워크 전공 과목의 C/Linux 소켓 프로그래밍 실습입니다.
+Daytime과 Echo Client/Server를 통해 TCP 연결, IPv4 주소 처리와 스트림 송수신을 학습했습니다.
 
----
+## 구현과 출처
 
-## Project Overview
+| 프로그램 | 기능 | 코드 |
+|---|---|---|
+| Daytime Server | 현재 시각 문자열 전송 후 연결 종료 | [daytime_server.c](daytime/daytime_server.c) |
+| Daytime Client | 서버의 시각 데이터를 EOF까지 수신 | [daytime_client.c](daytime/daytime_client.c) |
+| Echo Server | 수신한 바이트를 반환, 연결 종료 후 다음 접속 처리 | [echo_server.c](echo/echo_server.c) |
+| Echo Client | 입력 문자열 전송 후 전송 길이만큼 응답 수신 | [echo_client.c](echo/echo_client.c) |
 
-- **Language**: C
-- **Environment**: Linux
-- **Protocol**: TCP/IP
-- **Main Focus**: Socket Programming, Client–Server Communication, IPv4
+Daytime 소스는 파일 주석에 명시된 **UNIX Network Programming(3판)의 예제와 수업 수정 코드**를 기반으로 합니다. 기본 예제 전체를 독자 창작으로 주장하지 않습니다. Echo는 수업 실습 코드이며, 아래 실행·송수신 보완은 포트폴리오 정리 과정의 후속 수정입니다.
 
-본 프로젝트는 다음 두 가지 TCP 프로그램으로 구성됩니다.
-
-1. **Daytime Client/Server**
-2. **Echo Client/Server**
-
----
-
-## 1. TCP Daytime Client / Server
-
-### Daytime Client
-
-서버의 IP 주소를 입력받아 TCP 연결을 수립하고, 서버가 전송한 문자열 데이터를 수신하는 Client 프로그램입니다.
-
-#### 주요 기능
-
-- `socket()`을 이용한 TCP socket 생성
-- `sockaddr_in` 구조체를 이용한 서버 주소 설정
-- `htons()`를 이용한 포트 번호 변환
-- `inet_pton()`을 이용한 IPv4 문자열 주소 변환
-- `connect()`를 이용한 TCP 서버 연결
-- `read()`를 이용한 서버 데이터 수신
-- 수신 문자열 출력
-
-### Daytime Server
-
-TCP 연결을 대기하고, Client가 접속하면 현재 시각 정보를 문자열로 전송하는 Server 프로그램입니다.
-
-#### 주요 기능
-
-- `socket()`을 이용한 listening socket 생성
-- `INADDR_ANY`와 `htonl()`을 이용한 서버 주소 설정
-- `bind()`를 이용한 IP/Port 결합
-- `listen()`을 이용한 Client 연결 대기
-- `accept()`를 이용한 연결 수립
-- `time()` / `ctime()` 기반 현재 시각 문자열 생성
-- `write()`를 이용한 Client 데이터 전송
-- 통신 종료 후 연결 socket 정리
-
-### Connection Flow
-
-```text
-Client                              Server
-  |                                   |
-  | socket()                          | socket()
-  |                                   | bind()
-  |                                   | listen()
-  | connect() ----------------------> | accept()
-  |                                   |
-  | <--------- Time Data ------------ | write()
-  | read()                            |
-  |                                   |
-```
-
----
-
-## 2. TCP Echo Client / Server
-
-### Echo Client
-
-사용자가 입력한 문자열을 Server에 전송하고, Server가 반환한 동일한 데이터를 수신하여 출력합니다.
-
-#### 주요 기능
-
-- IP 주소와 Port를 입력받아 서버 연결
-- `socket()` / `connect()` 기반 TCP Client 구현
-- `fgets()`로 사용자 입력 처리
-- `write()`를 이용한 데이터 전송
-- `read()`를 반복 호출하여 전송한 데이터 길이만큼 응답 수신
-- `q` / `Q` 입력 시 Client 종료
-- 통신 종료 후 socket descriptor 정리
-
-### Echo Server
-
-Client의 연결 요청을 수락한 후 수신한 데이터를 그대로 다시 전송하는 Echo Server입니다.
-
-#### 주요 기능
-
-- `socket()` / `bind()` / `listen()` / `accept()` 기반 TCP Server 구성
-- Client가 보낸 데이터를 `read()`로 수신
-- 수신 데이터를 `write()`로 다시 Client에 전송
-- 연결 종료 후 socket descriptor 정리
-- 반복적인 Client 연결 요청 처리
-
-### Echo Communication Flow
-
-```text
-Client                              Server
-  |                                   |
-  | socket()                          | socket()
-  |                                   | bind()
-  |                                   | listen()
-  | connect() ----------------------> | accept()
-  |                                   |
-  | -------- "hello" --------------> | read()
-  |                                   | write()
-  | <------- "hello" ---------------- |
-  | read()                            |
-```
-
----
-
-## Socket API Used
-
-### Server Side
-
-```text
-socket()
-   ↓
-bind()
-   ↓
-listen()
-   ↓
-accept()
-   ↓
-read() / write()
-   ↓
-close()
-```
-
-### Client Side
-
-```text
-socket()
-   ↓
-inet_pton()
-   ↓
-connect()
-   ↓
-read() / write()
-   ↓
-close()
-```
-
----
-
-## IPv4 Address Handling
-
-TCP 통신을 위해 `sockaddr_in` 구조체를 사용했습니다.
-
-주요 요소:
-
-- `AF_INET`: IPv4 사용
-- `SOCK_STREAM`: TCP socket
-- `sin_port`: 서버 Port
-- `sin_addr`: IPv4 주소
-
-주소 및 Port 처리에는 다음 함수를 사용했습니다.
-
-- `htons()`  
-  Host byte order의 Port 값을 Network byte order로 변환
-
-- `htonl()`  
-  Host byte order의 32-bit 값을 Network byte order로 변환
-
-- `inet_pton()`  
-  문자열 형태의 IPv4 주소를 Network address 구조로 변환
-
----
-
-## Tech Stack
-
-- **Language**: C
-- **Environment**: Linux
-- **Network**: TCP/IP, IPv4
-- **API**:
-  - `socket()`
-  - `bind()`
-  - `listen()`
-  - `accept()`
-  - `connect()`
-  - `read()`
-  - `write()`
-  - `close()`
-  - `htons()`
-  - `htonl()`
-  - `inet_pton()`
-
----
+기존 저장소에는 `unp.h`와 오류 처리 지원 코드가 없어 독립 빌드가 불가능했습니다. [common/socket_support.h](common/socket_support.h)와 [socket_support.c](common/socket_support.c)는 필요한 POSIX 헤더·상수·오류 처리·포트 검증·전송 함수를 **새로 작성한 Linux용 지원 코드**입니다. 누락된 원본 UNP 라이브러리를 복원한 파일이 아닙니다.
 
 ## Build
 
-프로젝트에서 사용하는 `unp.h` 및 관련 라이브러리/지원 코드가 준비되어 있다는 전제에서 C compiler로 빌드할 수 있습니다.
+Linux에서 GCC와 GNU Make가 필요합니다. Windows에서는 WSL의 Linux 터미널을 사용하세요. 현재 Makefile은 Linux용이며 Windows 네이티브 빌드는 검증하지 않았습니다.
 
-예시:
-
-```bash
-gcc daytime_client.c -o daytime_client
-gcc daytime_server.c -o daytime_server
-gcc echo_client.c -o echo_client
-gcc echo_server.c -o echo_server
-```
-
----
-
-## Run Example
-
-### Echo Server
+Ubuntu/Debian 도구 설치:
 
 ```bash
-./echo_server <port>
+sudo apt update
+sudo apt install build-essential
 ```
 
-### Echo Client
+저장소 다운로드(Git 필요):
 
 ```bash
-./echo_client <server_ip> <port>
+git clone https://github.com/GwakRY/tcp-socket-programming.git
+cd tcp-socket-programming
+make
 ```
 
-Client에서 문자열을 입력하면 Server가 동일한 문자열을 반환합니다.
+Git 없이 **Code → Download ZIP**으로 내려받아 압축을 풀어도 됩니다. `make`와 아래 명령은 저장소 최상위 디렉터리에서 실행합니다. 외부 UNP 라이브러리 설치는 필요하지 않습니다.
+
+## Run
+
+서버와 클라이언트를 **서로 다른 터미널**에서 실행합니다. 서버는 로컬 주소 `127.0.0.1`에서만 접속을 받습니다.
+
+### Daytime
+
+터미널 1:
+
+```bash
+./build/daytime_server
+```
+
+터미널 2:
+
+```bash
+./build/daytime_client 127.0.0.1
+```
+
+시각 문자열이 출력된 뒤 클라이언트가 종료됩니다. 출력 예시이며 실제 시각은 실행 환경에 따라 다릅니다.
 
 ```text
-> hello
+Sun Oct  4 15:00:00 2026
+```
+
+기본 포트는 **1313**입니다. 원래 예제의 13번 대신 일반 사용자 권한으로 실행 가능한 포트를 사용합니다. 다른 포트를 사용할 때는 양쪽에 같은 값을 지정하세요.
+
+```bash
+./build/daytime_server 1513
+./build/daytime_client 127.0.0.1 1513
+```
+
+### Echo
+
+터미널 1:
+
+```bash
+./build/echo_server 9000
+```
+
+터미널 2:
+
+```bash
+./build/echo_client 127.0.0.1 9000
+```
+
+클라이언트에서 `hello`를 입력하면 다음과 같이 반환됩니다.
+
+```text
+ > hello
 Message from server: hello
 ```
 
----
+- 클라이언트: `q` / `Q` 입력 또는 `Ctrl+D`로 종료
+- 서버: `Ctrl+C`로 종료
+- `bind error: Address already in use`: 해당 포트의 기존 서버를 종료하거나 다른 포트 사용
+- `connect error: Connection refused`: 서버 실행 여부와 양쪽 포트 확인
 
-## What I Learned
+## 송수신 처리와 후속 개선
 
-- TCP Client와 Server의 역할 차이
-- `socket → bind → listen → accept`로 이어지는 TCP Server 연결 과정
-- `socket → connect`로 이어지는 TCP Client 연결 과정
-- `read()` / `write()` 기반 양방향 데이터 송수신
-- IPv4 주소와 Port를 socket 구조체에 설정하는 방법
-- Host byte order와 Network byte order의 차이
-- 연결 socket과 listening socket의 역할 차이
-- TCP가 byte stream 기반으로 데이터를 전달한다는 기본 특성
+**2026-10-04 후속 수정**이며 프로젝트 당시 구현과 구분합니다.
+
+- Echo Server: 초기화되지 않은 버퍼의 `strlen()` 대신 실제 버퍼 크기로 읽고, `read()` 결과 길이만큼 반환합니다.
+- Echo Client: 입력 EOF와 서버 조기 종료를 처리하고, 남은 응답 길이 이내로 읽어 버퍼 범위를 제한합니다.
+- 공통: 부분 전송 시 남은 바이트를 반복 전송하고 `EINTR`을 재시도합니다. 전송 시 `MSG_NOSIGNAL`을 사용합니다.
+- 실행: 포트 범위 검증, Makefile, 빌드 결과 제외, Daytime 포트 선택 및 로컬 주소 바인딩을 추가했습니다.
+
+TCP는 메시지 경계를 보존하지 않는 바이트 스트림입니다. Echo Client는 요청한 길이만큼 응답을 누적하며, 서버는 문자열 종료 문자 대신 수신 바이트 수로 응답합니다.
+
+학습용 순차 처리 서버이므로 연결 하나를 처리하는 동안 다음 연결 처리가 지연됩니다. 동시 접속 처리, 타임아웃, 인증·암호화는 포함하지 않습니다.
+
+## 실행 검증
+
+Ubuntu 24.04.3 LTS / GCC 13.3.0 / GNU Make 4.3 / Python 3 환경에서 프로그램 4개의 빌드와 [로컬 통합 테스트](tests/smoke.py) 6개를 확인했습니다.
+
+```bash
+make test
+```
+
+Python 표준 라이브러리만 사용하며, 외부 서버 없이 `127.0.0.1`의 임시 포트에서 검증합니다.
+
+| 검증 | 확인 내용 |
+|---|---|
+| Daytime | 실제 C 클라이언트의 시각 수신, 반복 접속 |
+| Echo 문자열 | 여러 줄 송수신, 종료 명령 |
+| 입력 종료 | 즉시 종료, EOF, 개행 없는 마지막 입력 |
+| 스트림 | 10,240바이트 바이너리 데이터 분할 송수신, 재접속 |
+| 잘못된 인자 | 포트 범위·문자열 및 잘못된 IPv4 주소 |
+| 불완전한 응답 | 서버가 응답 도중 종료하면 클라이언트 오류 종료 |
+
+실제 외부 네트워크·고부하·동시 접속 성능을 검증한 결과는 아닙니다.
+
+빌드 결과 정리:
+
+```bash
+make clean
+```

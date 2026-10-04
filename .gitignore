@@ -16,3 +16,7 @@ core.*
 # OS
 .DS_Store
 Thumbs.db
+
+# Makefile outputs and Python test cache
+/build/
+__pycache__/

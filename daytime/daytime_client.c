@@ -1,4 +1,4 @@
-﻿/*
+/*
     TCP Daytime Client
 
 - Original Source:
@@ -8,7 +8,7 @@
     Prof. Heejun Roh, Ph.D. (Inha University)
 
  */
-#include "unp.h"
+#include "socket_support.h"
 
 /*
 
@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
     struct sockaddr_in servaddr; // 서버의 주소를 저장한 인터넷 소켓 주소 구조체
 
     // 시간 서버의 IP 주소가 인자로 주어졌는지를 체크
-    if (argc != 2)
-        err_quit("usage: %s <IPaddress>", argv[0]);
+    if (argc != 2 && argc != 3)
+        err_quit("usage: %s <IPaddress> [port]", argv[0]);
 
         // Windows Sockets API Version 2.2를 사용하기 위한 부분
         // <https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup>
@@ -99,9 +99,9 @@ int main(int argc, char *argv[])
         err_sys("socket error");                        // 어느 쪽으로 써도 문제는 없음
 
     // 서버 주소에 대한 구조체 servaddr에 주소를 설정함
-    bzero(&servaddr, sizeof(servaddr));                       // 0으로 채움
+    memset(&servaddr, 0, sizeof(servaddr));                       // 0으로 채움
     servaddr.sin_family = AF_INET;                            // Internet Protocol Suite (IPv4)를 사용
-    servaddr.sin_port = htons(13);                            /* daytime server port number = 13임 */
+    servaddr.sin_port = htons(argc == 3 ? parse_port(argv[2]) : 1313);                            /* local default port: 1313 */
     if (inet_pton(AF_INET, argv[1], &servaddr.sin_addr) <= 0) // (argv[1] 문자열)에 저장된 dotted decimal 형식의 서버 주소를 32비트 이진수의 형태로 변환함
         err_quit("inet_pton error for %s", argv[1]);
 
@@ -134,5 +134,6 @@ int main(int argc, char *argv[])
     WSACleanup();
 #endif
 
+    if (close(sockfd) < 0) err_sys("close error");
     exit(0);
 }
